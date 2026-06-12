@@ -23,10 +23,15 @@
         .btn-help { position: absolute; top: 0; right: 0; background: transparent; border: 1px solid var(--panel-border); color: var(--text-muted); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-weight: bold; }
         .btn-help:hover { border-color: var(--primary); color: var(--primary); background: rgba(0, 180, 255, 0.05); }
 
-        .header { margin-bottom: 30px; margin-top: 10px; }
+        .header { margin-bottom: 50px; margin-top: 10px; }
         .logo-svg { width: 60px; height: 60px; color: var(--primary); margin-bottom: 5px; filter: drop-shadow(0px 0px 10px rgba(0,180,255,0.4)); }
         .logo-text { font-size: 34px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 11px; font-weight: 700; color: var(--primary); letter-spacing: 5px; text-transform: uppercase; margin-top: 5px; }
+
+        .verify-zone { border: 2px dashed #ffffff; background: rgba(255, 255, 255, 0.02); padding: 25px 20px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .verify-zone:hover { background: rgba(255, 255, 255, 0.06); transform: scale(1.01); border-color: var(--primary); }
+        .verify-title { font-size: 14px; font-weight: 700; color: #ffffff; margin: 0 0 4px 0; letter-spacing: 1px; text-transform: uppercase; }
+        .verify-subtitle { font-size: 11px; color: var(--text-muted); margin: 0; }
 
         .drop-zone { border: 2px dashed var(--primary); background: var(--panel); padding: 50px 20px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .drop-zone.drag-over, .drop-zone.loaded { border-color: #00e676; background: rgba(0, 230, 118, 0.05); }
@@ -131,6 +136,11 @@
         </div>
 
         <div id="mainInterface">
+            <div id="verifyZone" class="verify-zone" onclick="window.open('verificar.html', '_blank')">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 6px; filter: drop-shadow(0px 0px 5px rgba(255,255,255,0.2));"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 11 11 13 15 9"></polyline></svg>
+                <p class="verify-title">Verificación de veracidad del archivo</p>
+                <p class="verify-subtitle">¿Ya dispones de un certificado? Haz clic aquí para auditar el documento original en una nueva pestaña.</p>
+            </div>
             <input type="file" id="fileInput" style="display:none;">
             <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
                 <svg class="icon-folder" id="iconStatus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -323,16 +333,29 @@
             window.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
         });
 
-        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        
-        dropZone.addEventListener('drop', (e) => {
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) procesarArchivo(e.dataTransfer.files[0]);
+        // --- INICIO BLINDAJE ZONA DE ARRASTRE ---
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('drag-over'); // Enciende el verde
         });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) procesarArchivo(e.target.files[0]);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over'); // Apaga el verde
         });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files.length > 0) {
+            procesarArchivo(e.dataTransfer.files[0]);
+        }
+    });
+    // --- FIN BLINDAJE ZONA DE ARRASTRE ---
 
         async function procesarArchivo(file) {
             selectedFile = file;
@@ -394,7 +417,7 @@
             */
             
             // Simulamos una respuesta instantánea y exitosa del servidor
-            const result = { existe: false }; 
+            const result = { existe: false, nombre: selectedFile.name, tamano: selectedFile.size };
             // --- FIN DEL PUENTE ---
 
             if (result.existe) {
@@ -413,41 +436,32 @@
             }
         }
 
-        btnCertify.addEventListener('click', async () => {
+       btnCertify.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert("Por favor, selecciona un archivo para continuar.");
+                return;
+            }
+
             btnCertify.disabled = true;
             btnCertify.innerText = "Conectando con pasarela segura...";
 
             try {
-            // --- INICIO DEL PUENTE DE PAGO (BYPASS PARA PRUEBAS LOCALES) ---
-            /* const res = await fetch('/crear-pago', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ nombre: selectedFile.name, tamano: selectedFile.size, hash: hashHexGlobal })
-            });
-            const data = await res.json();
-            window.location.href = data.url; // Redirección a la pasarela real
-            */
-
             // 1. Simulamos el pago exitoso con un aviso visual rápido
             alert("✅ PAGO SIMULADO OK: Transacción de 1,00 € aprobada en entorno de pruebas.");
             
-            // 2. Forzamos la descarga automática del certificado PDF que diseñamos
-            descargarPDF('lblFileName');
+            // 2. Rellenamos los datos visuales en el panel de éxito ANTES de mostrarlo
+            document.getElementById('lblFileName').innerText = selectedFile.name;
+            document.getElementById('lblFileSize').innerText = (selectedFile.size / 1024).toFixed(2) + " KB";
+            document.getElementById('lblHash').innerText = hashHexGlobal;
 
+            // 3. Cambiamos la interfaz al panel verde (¡Eliminada la descarga automática!)
             document.getElementById('mainInterface').style.display = 'none';
             document.getElementById('resultPanel').style.display = 'block';
-
-            } else {
-            alert("Por favor, selecciona un archivo y acepta los términos para continuar.");
-    }
-}
-
-            // --- FIN DEL PUENTE ---
 
             } catch (error) {
                 alert("Error crítico de conexión.");
                 btnCertify.disabled = false;
-                btnCertify.innerText = "Procesar Pago (1,00 €) y Certificar";
+                btnCertify.innerText = "PROCESAR PAGO (1,00 €) Y CERTIFICAR";
             }
         });
 
@@ -708,26 +722,36 @@
 
             // Generar y forzar descarga
             doc.save("VortexHub_Certificado_" + hashHexGlobal.substring(0, 8) + ".pdf");
-
-            // --- INICIO CAMBIO DE INTERFAZ A ÉXITO ---
-        // Buscamos el contenedor o botón que tiene el mensaje de "Conectando..."
-        // IMPORTANTE: Cambia 'boton-certificar' por el ID real que tenga ese botón en tu HTML
-        const zonaAccion = document.getElementById('boton-certificar'); 
-        
-        if (zonaAccion) {
-            zonaAccion.outerHTML = `
-                <div style="text-align: center; margin-top: 20px; animation: fadeIn 0.5s;">
-                    <h3 style="color: #00ffcc; margin-bottom: 15px;">✅ Certificado Realizado con Éxito</h3>
-                    <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                        <button onclick="descargarPDF()" style="padding: 12px 24px; background: #0056b3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">📥 Descargar PDF</button>
-                        <button onclick="location.reload()" style="padding: 12px 24px; background: #333333; color: white; border: 1px solid #555; border-radius: 6px; cursor: pointer; font-weight: bold;">🔄 Procesar otro archivo</button>
-                    </div>
-                </div>
-            `;
         }
-        // --- FIN CAMBIO DE INTERFAZ ---
 
+        // --- INICIO FUNCIÓN COPIAR HASH ---
+        function copiarHash(event, elementId) {
+            event.preventDefault(); // Evita que la página haga cosas raras al clicar
+            
+            // Capturamos el texto exacto del Hash
+            const textoHash = document.getElementById(elementId).innerText;
+            
+            // Usamos la API moderna del navegador para copiar al portapapeles
+            navigator.clipboard.writeText(textoHash).then(() => {
+                // Efecto visual Pro: Cambiamos el botón temporalmente
+                const btn = event.currentTarget;
+                const contenidoOriginal = btn.innerHTML;
+                btn.innerHTML = '<span style="color:#000;">✅ ¡Copiado!</span>';
+                btn.style.background = '#00e676';
+                btn.style.border = 'none';
+                
+                // A los 2 segundos, lo devolvemos a su estado normal
+                setTimeout(() => { 
+                    btn.innerHTML = contenidoOriginal; 
+                    btn.style.background = 'transparent';
+                    btn.style.border = '1px solid var(--primary)';
+                }, 2000);
+            }).catch(err => {
+                alert("Tu navegador bloqueó el acceso al portapapeles. Cópialo manualmente.");
+            });
         }
+        // --- FIN FUNCIÓN COPIAR HASH ---
+
     </script>
 </body>
 </html>
