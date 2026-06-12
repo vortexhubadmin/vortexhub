@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VortexHub - Auditoría y Verificación</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <style>
+        body { 
+            background-color: #0f172a; 
+            color: #f8fafc; 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .container { 
+            background-color: #1e293b; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            text-align: center; 
+            max-width: 600px; 
+            width: 90%; 
+        }
+        .brand-header { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 5px; }
+        h1 { color: #f8fafc; font-size: 28px; margin: 0; letter-spacing: 1px; }
+        .highlight { color: #00d2ff; }
+        p.subtitle { color: #94a3b8; font-size: 15px; margin-bottom: 30px; margin-top: 8px;}
+        
+        .drop-zone { 
+            border: 2px dashed #334155; 
+            border-radius: 8px; 
+            padding: 50px 20px; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            margin-bottom: 20px; 
+        }
+        .drop-zone:hover { border-color: #00d2ff; background-color: rgba(0, 210, 255, 0.05); }
+        
+        .progress-wrapper { display: none; margin: 40px 0; }
+        .progress-bg { width: 100%; height: 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+        .progress-bar { width: 0%; height: 100%; background-color: #00d2ff; transition: width 0.1s; }
+        .progress-text { color: #a0aec0; font-size: 14px; font-weight: bold; }
+
+        /* PANEL DE VEREDICTO DINÁMICO */
+        .verdict-panel { 
+            display: none; 
+            border-radius: 12px; 
+            padding: 30px; 
+            text-align: left; 
+            transition: all 0.5s ease;
+        }
+        .verdict-header { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 20px; }
+        .verdict-icon { font-size: 48px; margin-right: 20px; }
+        .verdict-title { font-size: 22px; font-weight: bold; margin: 0 0 5px 0; }
+        .verdict-subtitle { color: #a0aec0; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .data-row { margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+        .data-label { color: #94a3b8; font-weight: bold; display: block; margin-bottom: 2px; }
+        .data-value { color: #f8fafc; word-break: break-all; font-family: monospace; font-size: 13px; background-color: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; display: inline-block; width: 100%; box-sizing: border-box; }
+
+        .btn-reset {
+            margin-top: 25px;
+            background-color: transparent;
+            color: #00d2ff;
+            border: 1px solid #00d2ff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        .btn-reset:hover { background-color: rgba(0, 210, 255, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="brand-header">
+            <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 12l10 5 10-5"></path>
+                <path d="M2 17l10 5 10-5"></path>
+            </svg>
+            <h1>VORTEX<span class="highlight">HUB</span></h1>
+        </div>
+        <p class="subtitle">Portal Oficial de Auditoría y Verificación</p>
+
+        <div id="dropZone" class="drop-zone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 55px; height: 55px; margin-bottom: 15px;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h5"></path>
+                <path d="M14 2l6 6v4"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="8" y1="13" x2="10" y2="13"></line>
+                <line x1="8" y1="17" x2="10" y2="17"></line>
+                <circle cx="17" cy="18" r="4"></circle>
+                <line x1="19.8" y1="20.8" x2="22" y2="23"></line>
+                <path d="M15.5 18l1 1 2-2"></path>
+            </svg>
+            <p style="margin: 0; color: #f8fafc; font-size: 18px; font-weight: bold;">Arrastre el documento original aquí</p>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">para iniciar la auditoría matemática de integridad</p>
+            <input type="file" id="fileInput" style="display: none;">
+        </div>
+
+        <div id="progressWrapper" class="progress-wrapper">
+            <div class="progress-bg"><div id="progressBar" class="progress-bar"></div></div>
+            <div id="progressText" class="progress-text">Leyendo archivo: 0%</div>
+        </div>
+
+        <div id="verdictPanel" class="verdict-panel">
+            <div class="verdict-header">
+                <div id="vIcon" class="verdict-icon">-</div>
+                <div>
+                    <h2 id="vTitle" class="verdict-title">-</h2>
+                    <p id="vSubtitle" class="verdict-subtitle">-</p>
+                </div>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Archivo Analizado:</span>
+                <span id="vFileName" class="data-value">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Huella SHA-256 Calculada:</span>
+                <span id="vHash" class="data-value">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Estado del Registro:</span>
+                <span id="vStatus" class="data-value">-</span>
+            </div>
+            
+            <button id="btnReset" class="btn-reset">Verificar Otro Documento</button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const btnReset = document.getElementById('btnReset');
+
+        // Capturar el Hash esperado desde la URL (?h=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const expectedHash = urlParams.get('h') ? urlParams.get('h').toLowerCase() : null;
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = '#00d2ff'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#334155'; });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files.length > 0) procesarArchivo(e.dataTransfer.files[0]); });
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if(e.target.files.length > 0) procesarArchivo(e.target.files[0]); });
+        btnReset.addEventListener('click', () => { location.reload(); });
+
+        function procesarArchivo(file) {
+            dropZone.style.display = 'none';
+            document.getElementById('progressWrapper').style.display = 'block';
+            
+            // MOTOR DE FRAGMENTACIÓN REAL (2MB por bloque)
+            const chunkSize = 2 * 1024 * 1024; 
+            let offset = 0;
+            const hasher = sha256.create();
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                hasher.update(e.target.result);
+                offset += e.target.result.byteLength;
+                
+                // Progreso real basado en la lectura física de bytes
+                let progress = Math.floor((offset / file.size) * 100);
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('progressText').innerText = `Procesando bloques de memoria: ${progress}%`;
+
+                if (offset < file.size) {
+                    readNextChunk();
+                } else {
+                    const finalHash = hasher.hex();
+                    setTimeout(() => mostrarVeredicto(file, finalHash), 400);
+                }
+            };
+
+            function readNextChunk() {
+                const slice = file.slice(offset, offset + chunkSize);
+                reader.readAsArrayBuffer(slice);
+            }
+
+            readNextChunk();
+        }
+
+        function mostrarVeredicto(file, finalHash) {
+            document.getElementById('progressWrapper').style.display = 'none';
+            const panel = document.getElementById('verdictPanel');
+            panel.style.display = 'block';
+            
+            document.getElementById('vFileName').innerText = file.name;
+            document.getElementById('vHash').innerText = finalHash;
+
+            const icon = document.getElementById('vIcon');
+            const title = document.getElementById('vTitle');
+            const subtitle = document.getElementById('vSubtitle');
+            const status = document.getElementById('vStatus');
+            const hashDisplay = document.getElementById('vHash');
+
+            // COMPARACIÓN CRIPTOGRÁFICA DE SEGURIDAD
+            if (expectedHash === null) {
+                // Modo demostración sin QR (Entrada directa a la web)
+                panel.style.backgroundColor = "rgba(0, 210, 255, 0.03)";
+                panel.style.borderColor = "#00d2ff";
+                icon.innerText = "🔍";
+                title.innerText = "Análisis Completado";
+                title.style.color = "#00d2ff";
+                subtitle.innerText = "Huella generada de forma aislada";
+                hashDisplay.style.color = "#00d2ff";
+                status.innerText = "Modo Demo: Falta Hash de referencia en la URL (?h=...)";
+                status.style.color = "#94a3b8";
+            } else if (finalHash === expectedHash) {
+                // VERDE: INTEGRIDAD CONFIRMADA (ÉXITO)
+                panel.style.backgroundColor = "rgba(16, 185, 129, 0.05)";
+                panel.style.borderColor = "#10b981";
+                panel.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.15)";
+                icon.innerText = "🛡️";
+                title.innerText = "Integridad Confirmada";
+                title.style.color = "#10b981";
+                subtitle.innerText = "Certificación Matemática Garantizada";
+                hashDisplay.style.color = "#10b981";
+                status.innerText = "DOCUMENTO AUTÉNTICO: Coincide al 100% con el registro inmutable.";
+                status.style.color = "#cbd5e1";
+            } else {
+                // ROJO: ALERTA DE ALTERACIÓN (FALLO)
+                panel.style.backgroundColor = "rgba(239, 68, 68, 0.05)";
+                panel.style.borderColor = "#ef4444";
+                panel.style.boxShadow = "0 0 25px rgba(239, 68, 68, 0.15)";
+                icon.innerText = "⚠️";
+                title.innerText = "Error de Validación";
+                title.style.color = "#ef4444";
+                subtitle.innerText = "El archivo ha sido alterado o manipulado";
+                hashDisplay.style.color = "#ef4444";
+                status.innerText = "ALERTA PERICIAL: La huella digital de este archivo NO coincide con el certificado.";
+                status.style.color = "#fca5a5";
+            }
+        }
+    </script>
+</body>
+</html>

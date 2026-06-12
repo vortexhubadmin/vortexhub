@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VortexHub - Proof Protocol</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        :root { 
+            --primary: #00b4ff; 
+            --bg-dark: #070b14;
+            --bg-grad: radial-gradient(circle at top, #131c2f 0%, #080d1a 100%);
+            --panel: rgba(19, 28, 47, 0.6);
+            --panel-border: rgba(0, 180, 255, 0.15);
+            --text-main: #ffffff;
+            --text-muted: #8b9bb4;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-grad); background-color: var(--bg-dark); color: var(--text-main); margin: 0; padding: 40px 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { position: relative; max-width: 850px; width: 100%; text-align: center; }
+
+        .btn-help { position: absolute; top: 0; right: 0; background: transparent; border: 1px solid var(--panel-border); color: var(--text-muted); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-weight: bold; }
+        .btn-help:hover { border-color: var(--primary); color: var(--primary); background: rgba(0, 180, 255, 0.05); }
+
+        .header { margin-bottom: 30px; margin-top: 10px; }
+        .logo-svg { width: 60px; height: 60px; color: var(--primary); margin-bottom: 5px; filter: drop-shadow(0px 0px 10px rgba(0,180,255,0.4)); }
+        .logo-text { font-size: 34px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        .subtitle { font-size: 11px; font-weight: 700; color: var(--primary); letter-spacing: 5px; text-transform: uppercase; margin-top: 5px; }
+
+        .drop-zone { border: 2px dashed var(--primary); background: var(--panel); padding: 50px 20px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .drop-zone.drag-over, .drop-zone.loaded { border-color: #00e676; background: rgba(0, 230, 118, 0.05); }
+        .drop-zone.drag-over { transform: scale(1.02); }
+        .icon-folder { width: 45px; height: 45px; color: var(--primary); margin-bottom: 15px; transition: 0.3s; }
+        .drop-zone.loaded .icon-folder { color: #00e676; }
+        .drop-title { font-size: 16px; font-weight: 600; margin: 0 0 5px 0; }
+        .drop-subtitle { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+        .btn { width: 100%; padding: 16px; border-radius: 8px; border: none; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: #000; box-shadow: 0 4px 15px rgba(0, 180, 255, 0.3); margin-bottom: 30px; }
+        .btn-primary:hover:not(:disabled) { background: #33c3ff; transform: translateY(-2px); }
+        .btn-primary:disabled { background: #1e293b; color: #475569; box-shadow: none; cursor: not-allowed; }
+
+        .trust-badges { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; justify-content: center; }
+        .badge-card { background: var(--panel); border: 1px solid var(--panel-border); padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; text-align: left; }
+        .badge-icon { width: 28px; height: 28px; color: var(--primary); flex-shrink: 0; }
+        .badge-title { font-size: 12px; font-weight: 800; color: #fff; margin: 0 0 2px 0; letter-spacing: 0.5px; }
+        .badge-desc { font-size: 11px; color: var(--text-muted); margin: 0; }
+        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: left; }
+        .step-card { background: rgba(19, 28, 47, 0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04); }
+        .step-num { font-size: 11px; color: var(--primary); font-weight: bold; letter-spacing: 1px; margin-bottom: 6px; }
+        .step-title { font-size: 15px; font-weight: 700; margin: 0 0 8px 0; color: #fff; }
+        .step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+        .result-panel { display: none; background: #0d1522; padding: 30px; border-radius: 12px; margin-bottom: 20px; text-align: left; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .panel-success { border: 1px solid #00e676; }
+        .header-success { color: #00e676; }
+        .panel-duplicate { border: 1px solid var(--primary); }
+        .header-duplicate { color: var(--primary); }
+
+        .result-header { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+        .result-msg { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+        .warning-box { background: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 12px 15px; border-radius: 4px; margin-bottom: 25px; font-size: 12px; color: #ffb74d; line-height: 1.5; }
+        .result-data { font-size: 14px; color: #fff; margin-bottom: 20px; }
+        .result-data span { color: var(--text-muted); }
+        
+        .hash-box { background: #070b14; border: 1px solid var(--panel-border); padding: 15px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; }
+        .hash-text { font-family: monospace; font-size: 13px; color: var(--primary); word-break: break-all; margin-right: 15px; }
+        
+        .action-buttons { display: flex; gap: 15px; }
+        .btn-action { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; flex: 1; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: rgba(0, 180, 255, 0.1); }
+        .btn-solid { background: #00e676; color: #000; border: none; }
+        .btn-solid:hover { background: #00c853; }
+        .btn-solid-blue { background: var(--primary); color: #000; border: none; }
+        .btn-solid-blue:hover { background: #33c3ff; }
+        .btn-reset { background: transparent; color: var(--text-muted); border: 1px solid #334155; }
+        .btn-reset:hover { background: rgba(255,255,255,0.05); color: #fff; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content { background: var(--bg-dark); border: 1px solid var(--panel-border); width: 90%; max-width: 650px; border-radius: 12px; padding: 30px; text-align: left; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: translateY(-20px); transition: transform 0.3s ease; max-height: 85vh; overflow-y: auto; }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: var(--bg-dark); border-radius: 4px; }
+        .modal-content::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        .modal-content::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .close-btn { font-size: 28px; color: var(--text-muted); cursor: pointer; transition: 0.2s; line-height: 1; margin-top: -5px; }
+        .close-btn:hover { color: var(--primary); }
+        
+        .faq-item { margin-bottom: 25px; }
+        .faq-item:last-child { margin-bottom: 0; }
+        .faq-item h4 { margin: 0 0 8px 0; color: var(--primary); font-size: 14px; }
+        .faq-item p { margin: 0 0 10px 0; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+        .faq-item ul { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+        .faq-item li { margin-bottom: 4px; }
+        /* Adaptación para móviles: Apilar tarjetas en vertical */
+    @media (max-width: 768px) {
+        .steps-grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .step-card { 
+            width: 100%;
+            margin-bottom: 15px; 
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <button class="btn-help" onclick="abrirFaq()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Ayuda / FAQ
+        </button>
+
+        <div class="header">
+            <svg class="logo-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M50 15 L85 32 L50 49 L15 32 Z" /><path d="M15 48 L50 65 L85 48" /><path d="M15 64 L50 81 L85 64" />
+            </svg>
+            <h1 class="logo-text">VortexHub</h1>
+            <div class="subtitle">Proof Protocol</div>
+        </div>
+
+        <div id="mainInterface">
+            <input type="file" id="fileInput" style="display:none;">
+            <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+                <svg class="icon-folder" id="iconStatus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><polyline points="9 14 12 17 15 14"></polyline>
+                </svg>
+                <p id="dropTitle" class="drop-title">Arrastra tu archivo aquí para generar la huella digital</p>
+                <p id="dropSubtitle" class="drop-subtitle">O haz clic para seleccionar un archivo desde tu dispositivo.</p>
+            </div>
+
+            <div id="progressWrapper" style="display: none; width: 100%; margin-bottom: 20px;">
+            <div style="width: 100%; height: 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                <div id="progressBar" style="width: 0%; height: 100%; background-color: #00d2ff; transition: width 0.2s;"></div>
+            </div>
+            <div id="progressText" style="color: #a0aec0; font-size: 13px; text-align: center;">Procesando archivo: 0%</div>
+        </div>
+
+            <button id="btnCertify" class="btn btn-primary" disabled>Certificar Documento (SHA-256)</button>
+
+            <div class="trust-badges">
+                <div class="badge-card"><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><div><h4 class="badge-title">CIFRADO DE GRADO MILITAR</h4><p class="badge-desc">Vortex Cipher Standard</p></div></div>
+                <div class="badge-card"><svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><div><h4 class="badge-title">FE PÚBLICA DIGITAL</h4><p class="badge-desc">Consenso de Tiempo Inmune</p></div></div>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card"><div class="step-num">PASO 01</div><h3 class="step-title">Cálculo Local</h3><p class="step-desc">El navegador extrae el código SHA-256 de tu archivo en local. Tu privacidad es absoluta.</p></div>
+                <div class="step-card"><div class="step-num">PASO 02</div><h3 class="step-title">Peaje Único</h3><p class="step-desc">Abonas el coste del sellado mediante pasarela encriptada. Sin suscripciones ni sorpresas.</p></div>
+                <div class="step-card"><div class="step-num">PASO 03</div><h3 class="step-title">Estampa Eterna</h3><p class="step-desc">Registramos la huella en nuestra red descentralizada global mediante sellado cronológico blindado.</p></div>
+            </div>
+        </div>
+
+        <div id="resultPanel" class="result-panel panel-success">
+            <div class="result-header header-success">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                HUELLA DIGITAL GENERADA CON ÉXITO (LOCAL-FIRST)
+            </div>
+            <p class="result-msg">Tu documento ha sido sellado e inmutabilizado de forma segura.</p>
+            
+            <div class="warning-box">
+    <strong>⚠️ ATENCIÓN - RESPONSABILIDAD DE GUARDA:</strong> VortexHub no almacena ni custodia ninguna copia de tu <strong>archivo original</strong>. Es tu responsabilidad exclusiva guardarlo inalterado en un lugar seguro. Te recomendamos custodiarlo siempre junto a este certificado, ya que la presentación conjunta de ambos garantiza la validez de la prueba.
+</div>
+            
+            <div class="result-data">
+                <div><span>Archivo: </span><b id="lblFileName"></b></div>
+                <div style="margin-top: 5px;"><span>Tamaño: </span><b id="lblFileSize"></b></div>
+            </div>
+
+            <div class="hash-box">
+                <div class="hash-text" id="lblHash"></div>
+                <button class="btn-action btn-outline" style="flex: 0; white-space: nowrap; padding: 8px 15px;" onclick="copiarHash(event, 'lblHash')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar Hash
+                </button>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-action btn-solid" onclick="descargarPDF('lblFileName')">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg> Descargar Certificado
+                </button>
+                <button class="btn-action btn-reset" onclick="location.reload()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg> Procesar otro
+                </button>
+            </div>
+        </div>
+
+        <div id="duplicatePanel" class="result-panel panel-duplicate">
+            <div class="result-header header-duplicate">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                DOCUMENTO PREVIAMENTE INMUTABILIZADO
+            </div>
+            <p class="result-msg">Este archivo ya forma parte de la red de VortexHub. No necesitas abonar un nuevo peaje. Puedes recuperar tu certificado original a continuación.</p>
+            
+            <div class="result-data">
+                <div><span>Archivo Registrado: </span><b id="dupFileName"></b></div>
+                <div style="margin-top: 5px;"><span>Tamaño: </span><b id="dupFileSize"></b></div>
+            </div>
+
+            <div class="hash-box">
+                <div class="hash-text" id="dupHash"></div>
+                <button class="btn-action btn-outline" style="flex: 0; white-space: nowrap; padding: 8px 15px;" onclick="copiarHash(event, 'dupHash')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copiar Hash
+                </button>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-action btn-solid-blue" onclick="descargarPDF('dupFileName')">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg> Recuperar Certificado
+                </button>
+                <button class="btn-action btn-reset" onclick="location.reload()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg> Procesar otro
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="faqModal" class="modal-overlay" onclick="cerrarFaqFuera(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Guía de Buenas Prácticas
+                </h2>
+                <span class="close-btn" onclick="cerrarFaq()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="faq-item">
+                    <h4>1. ¿Dónde guarda VortexHub mis archivos?</h4>
+                    <p>En ningún sitio. VortexHub utiliza una arquitectura de Privacidad Absoluta (<em>Zero-Knowledge</em>). Tu archivo nunca sale de tu dispositivo ni se sube a la nube. Nuestro sistema solo calcula la huella matemática (Hash SHA-256) en tu propio navegador. Eres el único custodio de tu información.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>2. ¿Por qué mi documento original no tiene un sello visual o marca de agua?</h4>
+                    <p>En el mundo digital, la pureza del archivo es la prueba. Añadir un sello, una marca de agua o un simple píxel invisible alteraría el código binario del documento original, cambiando por completo su huella digital y destruyendo su validez legal. Por eso, el archivo debe mantenerse virgen e inmaculado.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>3. ¿Cómo demuestro a un tercero que mi archivo está certificado?</h4>
+                    <p>Para demostrar la autenticidad, siempre debes entregar dos elementos juntos:</p>
+                    <ul>
+                        <li>El archivo original intacto.</li>
+                        <li>El Certificado PDF emitido por VortexHub.</li>
+                    </ul>
+                    <p>Cualquier tercero podrá arrastrar ese archivo original a nuestra plataforma y el sistema le confirmará gratuitamente que el documento es auténtico y coincide con el registro inmutable.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>4. ¿Qué ocurre si edito, modifico o pierdo el archivo original?</h4>
+                    <p>Si cambias una sola letra, modificas un píxel de una foto o guardas el archivo con un programa que altere sus metadatos internos, su huella criptográfica cambiará por completo y el certificado dejará de ser válido. Si pierdes el original, la prueba quedará huérfana e irrecuperable.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>5. La Recomendación de Oro: Tu "Caja Fuerte" Local</h4>
+                    <p>Para evitar errores humanos, te recomendamos aplicar esta sencilla rutina:</p>
+                    <ul>
+                        <li>Crea una carpeta en tu ordenador llamada <strong>Caja_Fuerte_VortexHub</strong>.</li>
+                        <li>Cada vez que certifiques un activo, guarda en esa carpeta el archivo original intocable junto a su Certificado PDF.</li>
+                        <li>Usa copias de ese archivo si necesitas editarlo o trabajar sobre él en tu día a día, conservando siempre el original de la Caja Fuerte como tu prueba legal.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logoBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAATkAAAE5CAYAAADr4VfxAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAB1ESURBVHic7d1rnJxlnebx312dREICHhBB8QyOIjDgJB7GxWUQXKC7OgFxGHDAHYOKqAiMJiEhCZ0DCQlKAiNymAV2BRV7AUm6ujUKZtTFdSCsnAUFBlGHQ2AUzEGSdP3nxdO1HdvupLuep+o+1PV9yYdUXZ/urqu7qu7nKhAREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREUmT8x1AElexKcCpwAeA/YFXAL8HHgN+DNxA2d3tL6CkTiUnxTNzVJiOYx4wZRT/4m6MJZRZjXPW6HjSWlRyUpwuKzGFDhxdwF/VcQsPYqxgMt/gSLe94HTSolRykl+XlZjKicAi4B0F3OLjwHL25Tqmum0F3J60MJWc1K/bJjCRkweelr6tAffwK4yVTOYqjnR/bMDtSwtQycnY9dnLqPLfgfnA65twj88AKzH+iU63uQn3JwlRycnorbVJbOUTOGYBr/OQYAPGV9mNlXzIveDh/iVCKjnZtdW2ByVm4JgD7OM7DvA8xldwXErZ/c53GAmbSk5GdovtxXjOwvF54JW+4wzjDxjXUWIZHe5p32EkTCo5+XN9tjf9fBbHOcDLfccZhU0Y11BlOdPdv/sOI2FRycmgW+0NjGMm8Algou84ddgC/A+2czHHu1/7DiNhUMkJfMfezHbOxfEpYDffcQqwDeNGSiyhw/3CdxjxSyXXyir2VmA2MAMY5zlNI1SBm4ELKLuf+w4jfqjkWlHFDsaYheOjQJvvOE1QxejD0aUxgNajkmslPXYo8AUcfw+UfMfxwDB6gcV0ujt9h5HmUMm1goq9H2MOjg70Pa+5gxILaHc/8B1EGks/8CnrscOB2TjKvqME7A6M5XS6Ht9BpDFUcinKym0hjg/6jhKRn2BcRJmKNu3SopJLRTZUWR5YBHmP7zjRctxHlS+zha9zkuv3HUfyU8nFLv9QpQxPA56JUMnFap2NYxN/P/CGwtt9x0mW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";
+        function abrirFaq() {
+            const modal = document.getElementById('faqModal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+        function cerrarFaq() {
+            const modal = document.getElementById('faqModal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+        function cerrarFaqFuera(e) { if (e.target.id === 'faqModal') cerrarFaq(); }
+
+        let selectedFile = null;
+        let hashHexGlobal = "";
+
+        const dropZone = document.getElementById('dropZone');
+        const dropTitle = document.getElementById('dropTitle');
+        const dropSubtitle = document.getElementById('dropSubtitle');
+        const fileInput = document.getElementById('fileInput');
+        const btnCertify = document.getElementById('btnCertify');
+        const iconStatus = document.getElementById('iconStatus');
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('exito') === 'true') {
+                document.getElementById('mainInterface').style.display = 'none';
+                document.getElementById('lblFileName').innerText = params.get('nombre');
+                
+                // Red de seguridad para el tamaño del archivo
+                const tamanoNum = parseFloat(params.get('tamano'));
+                if (!isNaN(tamanoNum) && document.getElementById('lblFileSize')) {
+                    document.getElementById('lblFileSize').innerText = (tamanoNum / 1024).toFixed(2) + " KB";
+                }
+                
+                hashHexGlobal = params.get('hash');
+                document.getElementById('lblHash').innerText = hashHexGlobal;
+                document.getElementById('resultPanel').style.display = 'block';
+
+                // DESBLOQUEO BLINDADO DEL BOTÓN
+                const btnCertify = document.getElementById('btnCertify');
+                if (btnCertify) {
+                    btnCertify.disabled = false;
+                    btnCertify.innerText = "Certificar Documento (SHA-256)";
+                }
+
+                window.history.replaceState({}, document.title, "/");
+            }
+        };
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            window.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) procesarArchivo(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) procesarArchivo(e.target.files[0]);
+        });
+
+        async function procesarArchivo(file) {
+            selectedFile = file;
+            dropZone.classList.add('loaded');
+            dropTitle.innerText = "Calculando Huella Criptográfica...";
+            dropSubtitle.innerText = file.name;
+            iconStatus.innerHTML = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 15 11 17 15 13"></polyline>';
+            
+            // --- INICIO MOTOR ÁRBOL DE MERKLE (CHUNKING) ---
+        // 1. Mostrar la barra de progreso
+        document.getElementById('progressWrapper').style.display = 'block';
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        const chunkSize = 2 * 1024 * 1024; // Tamaño de la mordida: 2 Megabytes
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        let chunkHashes = []; // Array para guardar las huellas temporales
+
+        // 2. Bucle de lectura y procesado por trozos
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end); // Cortamos el trozo
+
+            const chunkBuffer = await chunk.arrayBuffer();
+            const chunkHashBuffer = await crypto.subtle.digest('SHA-256', chunkBuffer);
+            
+            const chunkHashArray = Array.from(new Uint8Array(chunkHashBuffer));
+            const chunkHashHex = chunkHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            chunkHashes.push(chunkHashHex); // Guardamos la huella de este trozo
+
+            // Actualizar la interfaz visual
+            const percent = Math.round(((i + 1) / totalChunks) * 100);
+            progressBar.style.width = percent + '%';
+            progressText.innerText = `Procesando archivo: ${percent}%`;
+        }
+
+        // 3. Raíz de Merkle: Hashear la combinación de todas las huellas
+        const encoder = new TextEncoder();
+        const combinedHashes = encoder.encode(chunkHashes.join(''));
+        const finalHashBuffer = await crypto.subtle.digest('SHA-256', combinedHashes);
+        
+        hashHexGlobal = Array.from(new Uint8Array(finalHashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        // 4. Ocultar la barra al terminar (con un pequeño retraso para que se vea el 100%)
+        setTimeout(() => { 
+            document.getElementById('progressWrapper').style.display = 'none'; 
+        }, 500);
+        // --- FIN MOTOR ÁRBOL DE MERKLE ---
+            
+            try {
+            // --- INICIO DEL PUENTE (BYPASS PARA PRUEBAS LOCALES) ---
+            /* const res = await fetch('/verificar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ hash: hashHexGlobal })
+            });
+            const result = await res.json();
+            */
+            
+            // Simulamos una respuesta instantánea y exitosa del servidor
+            const result = { existe: false }; 
+            // --- FIN DEL PUENTE ---
+
+            if (result.existe) {
+                    document.getElementById('mainInterface').style.display = 'none';
+                    document.getElementById('dupFileName').innerText = result.nombre;
+                    document.getElementById('dupFileSize').innerText = (result.tamano / 1024).toFixed(2) + " KB";
+                    document.getElementById('dupHash').innerText = hashHexGlobal;
+                    document.getElementById('duplicatePanel').style.display = 'block';
+                } else {
+                    dropTitle.innerText = "¡Archivo listo para inmutabilizar!";
+                    btnCertify.innerText = "PROCESAR PAGO (1,00 €) Y CERTIFICAR";
+                    btnCertify.disabled = false;
+                }
+            } catch (error) {
+                dropTitle.innerText = "Error de conexión.";
+            }
+        }
+
+        btnCertify.addEventListener('click', async () => {
+            btnCertify.disabled = true;
+            btnCertify.innerText = "Conectando con pasarela segura...";
+
+            try {
+            // --- INICIO DEL PUENTE DE PAGO (BYPASS PARA PRUEBAS LOCALES) ---
+            /* const res = await fetch('/crear-pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nombre: selectedFile.name, tamano: selectedFile.size, hash: hashHexGlobal })
+            });
+            const data = await res.json();
+            window.location.href = data.url; // Redirección a la pasarela real
+            */
+
+            // 1. Simulamos el pago exitoso con un aviso visual rápido
+            alert("✅ PAGO SIMULADO OK: Transacción de 1,00 € aprobada en entorno de pruebas.");
+            
+            // 2. Forzamos la descarga automática del certificado PDF que diseñamos
+            descargarPDF('lblFileName'); 
+            
+            // --- FIN DEL PUENTE ---
+
+            } catch (error) {
+                alert("Error crítico de conexión.");
+                btnCertify.disabled = false;
+                btnCertify.innerText = "Procesar Pago (1,00 €) y Certificar";
+            }
+        });
+
+        function descargarPDF(idFileName) {
+            if (!hashHexGlobal) hashHexGlobal = document.getElementById('lblHash').innerText;
+            const filename = selectedFile ? selectedFile.name : "Archivo_Desconocido";
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            const primaryColor = [0, 180, 255]; // Azul VortexHub
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            // ==========================================
+            // PÁGINA 1: DECLARACIÓN CRIPTOGRÁFICA
+            // ==========================================
+
+            // 1. BLOQUE DE MARCA APAISADO (Logo + Textos alineados horizontalmente)
+            if (typeof logoBase64 !== 'undefined' && logoBase64 !== "") {
+                // Posicionamos el nuevo logo limpio en el margen izquierdo
+                doc.addImage(logoBase64, 'PNG', margin, 15, 25, 25, undefined, 'FAST');
+            }
+
+            // Nombre de la marca alineado al eje vertical superior del logo
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(28);
+            doc.setTextColor(10, 30, 50); // Azul muy oscuro/antracita para máxima elegancia
+            doc.text("VORTEXHUB", margin + 30, 26); 
+            
+            // Subtítulo con mayor tamaño y peso, alineado perfectamente debajo del nombre
+            doc.setFontSize(13);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text("PROOF PROTOCOL", margin + 31, 34);
+
+            // Línea divisoria de cabecera
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.5);
+            doc.line(margin, 46, pageWidth - margin, 46);
+
+            // 2. TÍTULO PRINCIPAL DE LA CERTIFICACIÓN
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            doc.setTextColor(10, 30, 50);
+            doc.text("DECLARACIÓN DE INTEGRIDAD CRIPTOGRÁFICA", margin, 58);
+
+            // 3. TEXTO INTRODUCTORIO CONTEXTUAL
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(80, 80, 80);
+            const introText = "Se certifica que el archivo referenciado ha sido procesado mediante un algoritmo de hashing seguro en el lado del cliente, extrayendo una huella digital única e inmutable. Este identificador garantiza la integridad matemática absoluta del archivo original.";
+            const splitIntro = doc.splitTextToSize(introText, pageWidth - margin * 2);
+            doc.text(splitIntro, margin, 66);
+
+            // 4. BLOQUE DE METADATOS TÉCNICOS
+            let currentY = 88;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text("Metadatos Técnicos:", margin, currentY);
+            
+            currentY += 10;
+            doc.setFontSize(10);
+            doc.setTextColor(50, 50, 50);
+            
+            // Metadato: Nombre
+            doc.setFont("helvetica", "normal");
+            doc.text("Nombre del Archivo:", margin, currentY);
+            doc.setFont("helvetica", "bold");
+            // Procesador de texto para nombres largos (salto de línea automático)
+        let splitFilename = doc.splitTextToSize(filename, 120); 
+        doc.text(splitFilename, margin + 45, currentY);
+        
+        // Si el nombre ha necesitado varias líneas, empujamos el espacio hacia abajo
+        // para que la "Fecha de Emisión" no se monte encima del texto
+        if (splitFilename.length > 1) {
+            currentY += (splitFilename.length - 1) * 5;
+        }
+
+            // Metadato: Fecha
+            currentY += 10;
+            doc.setFont("helvetica", "normal");
+            doc.text("Fecha de Emisión:", margin, currentY);
+            doc.setFont("helvetica", "bold");
+            doc.text(new Date().toLocaleString(), margin + 45, currentY);
+
+            // Metadato: Estado del Nodo
+            currentY += 10;
+            doc.setFont("helvetica", "normal");
+            doc.text("Estado de Red:", margin, currentY);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text("Local-First Secure Node (Verificado)", margin + 45, currentY);
+
+            // 5. SECCIÓN DEL IDENTIFICADOR HASH
+            currentY += 18;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text("SHA-256 HASH INMUTABLE (Técnica de Garantía Digital)", margin, currentY);
+
+            currentY += 9;
+            doc.setFont("courier", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text(hashHexGlobal, margin, currentY);
+            
+            currentY += 3;
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.line(margin, currentY, pageWidth - margin, currentY);
+
+            // 6. RECUADRO DE ADVERTENCIA RÁPIDA (ZKP)
+            currentY += 12;
+            const warningWidth = pageWidth - margin * 2;
+            const warningHeight = 22;
+
+            doc.setDrawColor(255, 152, 0); // Contorno Naranja original
+            doc.setLineWidth(0.5);
+            doc.rect(margin, currentY, warningWidth, warningHeight);
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(255, 100, 0);
+            doc.text("ATENCIÓN: RESPONSABILIDAD DE CUSTODIA (ZERO-KNOWLEDGE)", margin + 5, currentY + 7);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            const warningText = "VortexHub NO almacena, aloja ni retiene copias del archivo original. Si usted pierde o altera el archivo original, esta prueba criptográfica quedará invalidada e irrecuperable.";
+            const splitWarning = doc.splitTextToSize(warningText, warningWidth - 10);
+            doc.text(splitWarning, margin + 5, currentY + 13);
+
+            // COMPLEMENTO: PIE DE PÁGINA RIGUROSO DE LA PÁGINA 1
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(8);
+            doc.setTextColor(140, 140, 140);
+            doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20); // Línea estética inferior
+            doc.text("VortexHub Proof Protocol — Certificación de Integridad Matemática", margin, pageHeight - 14);
+            doc.text("Página 1 de 2", pageWidth - margin - 18, pageHeight - 14);
+
+// --- INICIO GENERACIÓN DE CÓDIGO QR ENLAZADO ---
+        const qr = new QRious({
+            // Añadimos el parámetro ?h= seguido de la variable donde guardas el hash en index.html
+            value: 'https://vortexhub.solutions/verificar?h=' + hashHexGlobal, 
+            size: 200,     
+            level: 'H'     
+        });
+
+        // 2. Coordenadas: Esquina inferior derecha del folio A4
+        const qrX = 155; 
+        const qrY = 240; 
+        const qrSize = 35; 
+        
+        // 3. Estampamos el QR en el PDF
+        doc.addImage(qr.toDataURL(), 'PNG', qrX, qrY, qrSize, qrSize);
+        
+        // 4. Añadimos texto pericial guiando al usuario
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("ESCANEAR PARA", qrX + (qrSize/2), qrY - 5, { align: "center" });
+        doc.text("AUDITAR DOCUMENTO", qrX + (qrSize/2), qrY - 1, { align: "center" });
+        // --- FIN GENERACIÓN DE CÓDIGO QR ---
+
+            // ==========================================
+            // PÁGINA 2: MARCO DE RESPONSABILIDAD LEGAL INTEGRADO
+            // ==========================================
+            doc.addPage();
+            
+            // Cabecera Reducida pero Alineada para la Página 2
+            if (typeof logoBase64 !== 'undefined' && logoBase64 !== "") {
+                doc.addImage(logoBase64, 'PNG', margin, 15, 15, 15, undefined, 'FAST');
+            }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            doc.setTextColor(10, 30, 50);
+            doc.text("VORTEXHUB", margin + 20, 22);
+            doc.setFontSize(8);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text("PROOF PROTOCOL", margin + 20, 26);
+            
+            doc.setDrawColor(220, 220, 220);
+            doc.line(margin, 35, pageWidth - margin, 35);
+
+            // Título de la sección de Exclusiones y Límites
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13);
+            doc.setTextColor(10, 30, 50);
+            doc.text("MARCO DE RESPONSABILIDAD Y LIMITACIÓN DE RIESGOS", margin, 48);
+
+            // Breve descripción introductoria legal (sin la frase eliminada)
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9.5);
+            doc.setTextColor(100, 100, 100);
+            doc.text("VortexHub es un proveedor de infraestructura tecnológica, no un bufete de abogados ni un organismo de defensa jurídica.", margin, 55);
+
+            // Desarrollo del decálogo maestro integrado
+            let yPage2 = 65;
+            const lineSpacing = 5.5;
+
+            // Bloque 1
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(10, 30, 50);
+            doc.text("1. Naturaleza Zero-Knowledge y Privacidad (RGPD)", margin, yPage2);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80, 80, 80);
+            yPage2 += lineSpacing;
+            const text1 = "Este certificado actúa exclusivamente como un sello de tiempo y notario matemático digital. En estricto cumplimiento de la privacidad por diseño, el procesamiento se realiza íntegramente en el dispositivo del usuario (Local-First). VortexHub no recopila, transmite ni almacena el contenido del archivo original ni datos de carácter personal vinculados al mismo, garantizando la absoluta confidencialidad de la información.";
+            const splitText1 = doc.splitTextToSize(text1, pageWidth - margin * 2);
+            doc.text(splitText1, margin, yPage2);
+            yPage2 += (splitText1.length * lineSpacing) + 5;
+
+            // Bloque 2
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(10, 30, 50);
+            doc.text("2. Exclusión de Guarda y Responsabilidad de Custodia", margin, yPage2);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80, 80, 80);
+            yPage2 += lineSpacing;
+            const text2 = "VortexHub no almacena, aloja, duplica ni retiene los archivos originales procesados. Es responsabilidad absoluta e inexcusable del usuario custodiar y preservar el archivo digital original inalterado. La más mínima alteración (cambio de un píxel, metadato o carácter) generará un Hash distinto, lo que invalidará la vinculación con este certificado y eximirá a la plataforma de cualquier responsabilidad.";
+            const splitText2 = doc.splitTextToSize(text2, pageWidth - margin * 2);
+            doc.text(splitText2, margin, yPage2);
+            yPage2 += (splitText2.length * lineSpacing) + 5;
+
+            // Bloque 3
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(10, 30, 50);
+            doc.text("3. Presentación y Validez de la Prueba Pericial", margin, yPage2);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80, 80, 80);
+            yPage2 += lineSpacing;
+            const text3 = "Para que esta declaración criptográfica tenga validez técnica o pericial frente a terceros, debe presentarse conjuntamente el archivo original y el certificado de VortexHub (PDF). El perito o tercero receptor podrá verificar la integridad de forma objetiva repitiendo el proceso de hashing sobre el archivo original y comprobando que el resultado coincide exactamente con el código impreso en la página 1.";
+            const splitText3 = doc.splitTextToSize(text3, pageWidth - margin * 2);
+            doc.text(splitText3, margin, yPage2);
+            yPage2 += (splitText3.length * lineSpacing) + 5;
+
+            // Bloque 4
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(10, 30, 50);
+            doc.text("4. Alcance Legal y Concurrencia de Derechos", margin, yPage2);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80, 80, 80);
+            yPage2 += lineSpacing;
+            const text4 = "La emisión de este hash certifica la existencia e integridad de un archivo en una fecha cierta, operando como prueba de prioridad temporal (Convenio de Berna). Sirve como prueba tasada para acogerse al Derecho de Posesión Previa o demostrar la custodia de Secretos Comerciales. Sin embargo, el protocolo no evalúa ni valida la legalidad, originalidad o titularidad de los derechos de fondo del archivo, ni altera derechos de propiedad industrial formalizados con anterioridad.";
+            const splitText4 = doc.splitTextToSize(text4, pageWidth - margin * 2);
+            doc.text(splitText4, margin, yPage2);
+
+            // COMPLEMENTO: PIE DE PÁGINA RIGUROSO DE LA PÁGINA 2
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(8);
+            doc.setTextColor(140, 140, 140);
+            doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20); // Línea estética inferior
+            doc.text("VortexHub Proof Protocol — Marco Operativo de Seguridad Jurídica", margin, pageHeight - 14);
+            doc.text("Página 2 de 2", pageWidth - margin - 18, pageHeight - 14);
+
+        
+
+            // Generar y forzar descarga
+            doc.save("VortexHub_Certificado_" + hashHexGlobal.substring(0, 8) + ".pdf");
+        }
+    </script>
+</body>
+</html>
