@@ -432,8 +432,16 @@
             alert("✅ PAGO SIMULADO OK: Transacción de 1,00 € aprobada en entorno de pruebas.");
             
             // 2. Forzamos la descarga automática del certificado PDF que diseñamos
-            descargarPDF('lblFileName'); 
-            
+            descargarPDF('lblFileName');
+
+            document.getElementById('mainInterface').style.display = 'none';
+            document.getElementById('resultPanel').style.display = 'block';
+
+            } else {
+            alert("Por favor, selecciona un archivo y acepta los términos para continuar.");
+    }
+}
+
             // --- FIN DEL PUENTE ---
 
             } catch (error) {
@@ -700,6 +708,25 @@
 
             // Generar y forzar descarga
             doc.save("VortexHub_Certificado_" + hashHexGlobal.substring(0, 8) + ".pdf");
+
+            // --- INICIO CAMBIO DE INTERFAZ A ÉXITO ---
+        // Buscamos el contenedor o botón que tiene el mensaje de "Conectando..."
+        // IMPORTANTE: Cambia 'boton-certificar' por el ID real que tenga ese botón en tu HTML
+        const zonaAccion = document.getElementById('boton-certificar'); 
+        
+        if (zonaAccion) {
+            zonaAccion.outerHTML = `
+                <div style="text-align: center; margin-top: 20px; animation: fadeIn 0.5s;">
+                    <h3 style="color: #00ffcc; margin-bottom: 15px;">✅ Certificado Realizado con Éxito</h3>
+                    <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        <button onclick="descargarPDF()" style="padding: 12px 24px; background: #0056b3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">📥 Descargar PDF</button>
+                        <button onclick="location.reload()" style="padding: 12px 24px; background: #333333; color: white; border: 1px solid #555; border-radius: 6px; cursor: pointer; font-weight: bold;">🔄 Procesar otro archivo</button>
+                    </div>
+                </div>
+            `;
+        }
+        // --- FIN CAMBIO DE INTERFAZ ---
+
         }
     </script>
 </body>
